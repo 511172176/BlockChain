@@ -23,5 +23,10 @@ module.exports = {
         accounts: [`0x${process.env.PRIVATE_KEY}`],
         gasPrice: "auto",  // 手動設置 gasPrice 來控制費用
     },
+    arbitrum: {
+      url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,  // Infura 的 Arbitrum 主網 RPC URL
+      accounts: [`0x${process.env.PRIVATE_KEY}`],  // 錢包私鑰
+      chainId: 42161  // Arbitrum 主網的鏈 ID
+    }
   },
 };

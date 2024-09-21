@@ -1,9 +1,0 @@
-const newprovider = ethers.getDefaultProvider();newprovider.getBlockNumber().then((blockNumber) => {console.log("Current block number:", blockNumber);});
-});
-    console.log("Current block number:", blockNumber);
-n{
-const newProvider = ethers.getDefaultProvider();
-const provider = ethers.getDefaultProvider();provider.getBlockNumber().then((blockNumber) => {console.log("Current block number:", blockNumber);});
-});
-prov  console.log("Current block number:", blockNumber);
-const provider = ethers.getDefaultProvider();
