@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -6,8 +6,6 @@ const { ethers } = require('ethers');
 const FjcuToken = require('./FjcuToken.json'); // ABI 文件
 
 mongoose.set('strictQuery', true);  // 或者 false 根據需求
-
-//console.log('Infura Project ID:', process.env.INFURA_PROJECT_ID);
 
 const app = express();
 app.use(cors());
@@ -30,8 +28,8 @@ const Transaction = mongoose.model('Transaction', new mongoose.Schema({
 }));
 
 // 設置 ethers 提供者和簽名者
-const provider = new ethers.providers.InfuraProvider('arbitrum', process.env.INFURA_PROJECT_ID);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const provider = new ethers.JsonRpcProvider(`https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`);
+const wallet = new ethers.Wallet(`0x${process.env.PRIVATE_KEY}`, provider);
 const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, FjcuToken.abi, wallet);
 
 // API 路由
