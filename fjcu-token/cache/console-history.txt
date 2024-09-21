@@ -1,3 +1,4 @@
+const provider = ethers.getDefaultProvider();provider.getBlockNumber().then((blockNumber) => {console.log("Current block number:", blockNumber);});
 const gasEstimate = await FjcuToken.deploy(initialSupply).estimateGas();console.log("Estimated gas cost:", gasEstimate.toS
 console.log("Estimated gas 
 const gasEstimate = await FjcuToken.deploy(initialSupply).estimateGas();
