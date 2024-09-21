@@ -1,0 +1,66 @@
+const gasEstimate = await FjcuToken.deploy(initialSupply).estimateGas();console.log("Estimated gas cost:", gasEstimate.toS
+console.log("Estimated gas 
+const gasEstimate = await FjcuToken.deploy(initialSupply).estimateGas();
+});
+  console.log("Current block number:", blockNumber);
+provider.getBlockNumber().then((blockNumber) => {
+provider.getBalance(walletAddress).then((balance) => {console.log("Balance:", ethers.utils.formatEther(balance), "ETH");});
+const provider = ethers.provider;
+provider.getBalance(walletAddress).then((balance) => {console.log("Balance:", ethers.utils.formatEther(balance), "ETH");});
+let walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+let walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+});
+ers.utils.formatEther(balance), "ETH");
+provider.getBalance(walletAddress)  console.log("Balance:", eth
+let walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+npx hardhat console --network sepolia
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+npx hardhat console --network sepolia
+let walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+});
+og("Balance:", ethers.utils.formatEther(balance), "ETH");
+provider.getBala  console.l
+let walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";  // 使用 let 聲明可變變量
+});
+e:", ethers.utils.formatEther(balance), "ETH");
+provider.getBalance(newWallet  console.log("Balanc
+const newWalletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+const walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+const walletAddress = "YOUR_WALLET_ADDRESS";
+});
+  console.log("Balance:", ethers.utils.formatEther(balance), "ETH");
+provider.getBalance(walletAddress).then((balance) => {
+const walletAddress = "YOUR_WALLET_ADDRESS";
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+  console.log("Balance:", ethers.utils.format});
+provider.getBalance(walletAddress).then((balance) => {
+const walletAddress = "0x0C46205B0aCccA75c2f50F0037f15cA65F5DC269";
+const walletAddress = "YOUR_WALLET_ADDRESS";
+});
+  console.log("Current block number:", blockNumber);
+provider.getBlockNumber().then((blockNumber) => {
+const provider = ethers.provider;
+});
+urrent block number:", blockNumber);
+provider.getBloc  console.log("C
+const provider = ethers.provider;
+});
+provider.getBloc  console.log("Current block number:", blockNumber);
+const provider = ethers.provider;
