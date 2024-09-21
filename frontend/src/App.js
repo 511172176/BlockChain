@@ -1,3 +1,5 @@
+// src/App.js
+
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import axios from 'axios';
@@ -11,67 +13,63 @@ function App() {
   const [ethRecipient, setEthRecipient] = useState('');
   const [ethAmount, setEthAmount] = useState('');
   const [transactions, setTransactions] = useState([]);
-
-  // 環境變量
   const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
-  // 連接錢包
   const connectWallet = async () => {
     if (window.ethereum) {
       try {
         const [selectedAccount] = await window.ethereum.request({ method: 'eth_requestAccounts' });
         setAccount(selectedAccount);
-        fetchBalances(selectedAccount);
-        fetchTransactions();
+        await fetchBalances(selectedAccount);  // 獲取最新餘額
+        await fetchTransactions();  // 獲取交易紀錄
       } catch (error) {
-        console.error("用戶拒絕了錢包連接");
+        console.error("用戶拒絕了錢包連接", error);
+        alert("用戶拒絕了錢包連接");
       }
     } else {
       alert("請安裝 MetaMask 錢包！");
     }
   };
+  
 
-  // 獲取代幣和 ETH 餘額
   const fetchBalances = async (address) => {
-    fetchTokenBalance(address);
-    fetchEthBalance(address);
+    await fetchTokenBalance(address);
+    await fetchEthBalance(address);
   };
 
-  // 獲取 ERC-20 代幣餘額
   const fetchTokenBalance = async (address) => {
     try {
       const response = await axios.get(`${backendUrl}/api/balance/${address}`);
-      console.log(`獲取到的代幣餘額: ${response.data.balance} FJCU`);
-      setTokenBalance(response.data.balance);
+      setTokenBalance(response.data.balance);  // 更新代幣餘額
     } catch (error) {
       console.error("無法獲取代幣餘額", error);
+      alert("無法獲取代幣餘額");
     }
   };
+  
 
-  // 獲取 ETH 餘額
   const fetchEthBalance = async (address) => {
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const balance = await provider.getBalance(address);
-      console.log(`獲取到的 ETH 餘額: ${ethers.utils.formatEther(balance)} ETH`);
-      setEthBalance(ethers.utils.formatEther(balance));
+      const formattedEthBalance = ethers.utils.formatEther(balance);
+      setEthBalance(formattedEthBalance);
     } catch (error) {
       console.error("無法獲取 ETH 餘額", error);
+      alert("無法獲取 ETH 餘額");
     }
   };
 
-  // 獲取交易記錄
   const fetchTransactions = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/transactions`);
       setTransactions(response.data);
-      console.log(`Fetched transactions:`, response.data);
     } catch (error) {
       console.error("無法獲取交易記錄", error);
+      alert("無法獲取交易記錄");
     }
   };
 
-  // 處理 ERC-20 代幣轉帳
   const handleTokenTransfer = async (e) => {
     e.preventDefault();
     if (!recipient || !amount) {
@@ -79,19 +77,22 @@ function App() {
       return;
     }
 
+    if (recipient.toLowerCase() === account.toLowerCase()) {
+      alert("無法將代幣轉帳給自己");
+      return;
+    }
+
     try {
       const tx = await axios.post(`${backendUrl}/api/transfer`, { to: recipient, amount });
-      console.log(`代幣轉帳成功，交易哈希: ${tx.data.txHash}`);
       alert(`代幣轉帳成功，交易哈希: ${tx.data.txHash}`);
-      fetchBalances(account);
-      fetchTransactions();
+      await fetchBalances(account);
+      await fetchTransactions(); // 重新獲取交易紀錄
     } catch (error) {
       console.error("代幣轉帳失敗", error);
       alert("代幣轉帳失敗");
     }
   };
 
-  // 處理 ETH 轉帳
   const handleEthTransfer = async (e) => {
     e.preventDefault();
     if (!ethRecipient || !ethAmount) {
@@ -99,40 +100,39 @@ function App() {
       return;
     }
 
+    if (ethRecipient.toLowerCase() === account.toLowerCase()) {
+      alert("無法將 ETH 轉帳給自己");
+      return;
+    }
+
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      console.log(`Sending ETH: ${ethAmount} ETH to ${ethRecipient}`);
       const tx = await signer.sendTransaction({
         to: ethRecipient,
         value: ethers.utils.parseEther(ethAmount)
       });
-      console.log(`Transaction sent: ${tx.hash}`);
       await tx.wait();
-      console.log(`Transaction confirmed: ${tx.hash}`);
-      alert(`ETH 轉帳成功，交易哈希: ${tx.hash}`);
-      fetchBalances(account);
-      fetchTransactions();
 
-      // 通知後端保存 ETH 轉帳記錄
-      console.log(`Notifying backend to save ETH transfer: ${tx.hash}`);
+      // 保存交易紀錄到後端
       await axios.post(`${backendUrl}/api/eth-transfer`, { to: ethRecipient, amount: ethAmount, txHash: tx.hash });
-      console.log(`Backend notified for ETH transfer: ${tx.hash}`);
+      alert(`ETH 轉帳成功，交易哈希: ${tx.hash}`);
+      await fetchBalances(account);
+      await fetchTransactions(); // 獲取最新交易紀錄
     } catch (error) {
       console.error("ETH 轉帳失敗", error);
       alert("ETH 轉帳失敗");
     }
   };
 
-  // 自動刷新餘額（每 10 秒）
   useEffect(() => {
-    if (account) {
-      fetchBalances(account);
-      const interval = setInterval(() => {
+    const interval = setInterval(() => {
+      if (account) {
         fetchBalances(account);
-      }, 10000); // 每 10 秒刷新一次
-      return () => clearInterval(interval);
-    }
+        fetchTransactions();
+      }
+    }, 10000);
+    return () => clearInterval(interval);
   }, [account]);
 
   return (
@@ -166,6 +166,7 @@ function App() {
                 onChange={(e) => setAmount(e.target.value)}
                 required
                 min="0"
+                step="any"
               />
             </div>
             <button type="submit">轉帳</button>
@@ -216,9 +217,13 @@ function App() {
                   <td>{tx.to}</td>
                   <td>{tx.amount}</td>
                   <td>
-                    <a href={`https://sepolia-explorer.arbitrum.io/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer">
-                      {tx.txHash.substring(0, 10)}...
-                    </a>
+                    {tx.txHash ? (
+                      <a href={`https://sepolia.arbiscan.io/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer">
+                        {tx.txHash.substring(0, 10)}...
+                      </a>
+                    ) : (
+                      'N/A'
+                    )}
                   </td>
                   <td>{new Date(tx.timestamp).toLocaleString()}</td>
                   <td>{tx.type}</td>

@@ -5,66 +5,44 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { ethers } = require('ethers');
-const FjcuToken = require('./FjcuToken.json'); // ABI 文件
-
-mongoose.set('strictQuery', true);  // 根據需求設置
-
-//console.log('Ethers:', ethers);
+const FjcuToken = require('./FjcuToken.json');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 連接 MongoDB（移除已棄用的選項）
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
 
-// 定義交易記錄模型
 const Transaction = mongoose.model('Transaction', new mongoose.Schema({
   from: String,
   to: String,
   amount: Number,
   txHash: String,
   timestamp: { type: Date, default: Date.now },
-  type: String, // 新增類型字段
+  type: String,
 }));
 
-// 設置 ethers 提供者和簽名者
-const infuraUrl = `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`;
-console.log(`Infura URL: ${infuraUrl}`);
-const provider = new ethers.JsonRpcProvider(infuraUrl);  // 使用 JsonRpcProvider
-
-provider.getNetwork().then(network => {
-  console.log(`Connected to network: ${network.name} (chainId: ${network.chainId})`);
-}).catch(error => {
-  console.error('Failed to get network:', error);
-});
-
-const wallet = new ethers.Wallet(`0x${process.env.PRIVATE_KEY}`, provider);
-console.log(`Wallet Address: ${wallet.address}`);
-
-const contractAddress = process.env.CONTRACT_ADDRESS;
-console.log(`Contract Address: ${contractAddress}`);
-const contract = new ethers.Contract(contractAddress, FjcuToken.abi, wallet);
-
-// API 路由
+const provider = new ethers.providers.JsonRpcProvider(`https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, FjcuToken.abi, wallet);
 
 // 獲取代幣餘額
 app.get('/api/balance/:address', async (req, res) => {
   try {
-    const inputAddress = req.params.address;
-    console.log(`Input Address: ${inputAddress}`);
-    // 使用 ethers.getAddress 確保地址格式正確
-    const checksummedAddress = ethers.getAddress(inputAddress.toLowerCase());
-    console.log(`Checksummed Address: ${checksummedAddress}`);
-    const balance = await contract.balanceOf(checksummedAddress);
-    const formattedBalance = ethers.formatUnits(balance, 18);
-    console.log(`Balance for ${checksummedAddress}: ${formattedBalance} FJCU`);
-    res.json({ balance: formattedBalance });
+    const address = ethers.utils.getAddress(req.params.address.toLowerCase());  // 確保地址格式正確
+    const balance = await contract.balanceOf(address);  // 獲取代幣餘額
+    res.json({ balance: ethers.utils.formatUnits(balance, 18) });  // 返回格式化的餘額
   } catch (error) {
     console.error('獲取餘額失敗:', error);
-    res.status(500).json({ error: '無法獲取餘額' });
+    res.status(500).json({ error: '無法獲取餘額', details: error.message });
   }
 });
 
@@ -72,29 +50,25 @@ app.get('/api/balance/:address', async (req, res) => {
 app.post('/api/transfer', async (req, res) => {
   const { to, amount } = req.body;
   try {
-    // 使用 ethers.getAddress 確保地址格式正確
-    const checksummedTo = ethers.getAddress(to.toLowerCase());
-    console.log(`Transferring ${amount} FJCU to ${checksummedTo}`);
-    const tx = await contract.transfer(checksummedTo, ethers.parseUnits(amount, 18));
-    console.log(`Transaction sent: ${tx.hash}`);
-    await tx.wait();
-    console.log(`Transaction confirmed: ${tx.hash}`);
+    const checksummedTo = ethers.utils.getAddress(to.toLowerCase());
 
-    // 保存交易記錄到資料庫
+    const parsedAmount = ethers.utils.parseUnits(amount, 18);
+    const tx = await contract.transfer(checksummedTo, parsedAmount);
+    const receipt = await tx.wait();  // 等待交易確認
+
     const transaction = new Transaction({
       from: wallet.address,
       to: checksummedTo,
-      amount,
-      txHash: tx.hash,
-      type: 'FJCU', // 設定類型為 FJCU 代幣轉帳
+      amount: parseFloat(amount),
+      txHash: receipt.transactionHash,  // 使用交易回執中的哈希
+      type: 'FJCU',
     });
     await transaction.save();
-    console.log(`Transaction saved: ${tx.hash}`);
 
-    res.json({ txHash: tx.hash });
+    res.json({ txHash: receipt.transactionHash });  // 返回交易哈希
   } catch (error) {
     console.error('轉帳失敗:', error);
-    res.status(500).json({ error: '轉帳失敗' });
+    res.status(500).json({ error: '轉帳失敗', details: error.message });
   }
 });
 
@@ -102,32 +76,33 @@ app.post('/api/transfer', async (req, res) => {
 app.post('/api/eth-transfer', async (req, res) => {
   const { to, amount } = req.body;
   try {
-    // 使用 ethers.getAddress 確保地址格式正確
-    const checksummedTo = ethers.getAddress(to.toLowerCase());
-    console.log(`Transferring ${amount} ETH to ${checksummedTo}`);
+    const checksummedTo = ethers.utils.getAddress(to.toLowerCase());
+
+    // 確保不會轉帳給自己
+    if (checksummedTo === wallet.address) {
+      return res.status(400).json({ error: '無法將 ETH 轉帳給自己' });
+    }
+
+    const parsedAmount = ethers.utils.parseEther(amount);
     const tx = await wallet.sendTransaction({
       to: checksummedTo,
-      value: ethers.parseEther(amount),
+      value: parsedAmount,
     });
-    console.log(`ETH Transaction sent: ${tx.hash}`);
-    await tx.wait();
-    console.log(`ETH Transaction confirmed: ${tx.hash}`);
+    const receipt = await tx.wait();  // 等待交易確認
 
-    // 保存交易記錄到資料庫
     const transaction = new Transaction({
       from: wallet.address,
       to: checksummedTo,
-      amount,
-      txHash: tx.hash,
+      amount: parseFloat(amount),
+      txHash: receipt.transactionHash,
       type: 'ETH',
     });
     await transaction.save();
-    console.log(`ETH Transaction saved: ${tx.hash}`);
 
-    res.json({ txHash: tx.hash });
+    res.json({ txHash: receipt.transactionHash });  // 返回交易哈希
   } catch (error) {
     console.error('ETH 轉帳失敗:', error);
-    res.status(500).json({ error: 'ETH 轉帳失敗' });
+    res.status(500).json({ error: 'ETH 轉帳失敗', details: error.message });
   }
 });
 
@@ -135,15 +110,13 @@ app.post('/api/eth-transfer', async (req, res) => {
 app.get('/api/transactions', async (req, res) => {
   try {
     const transactions = await Transaction.find().sort({ timestamp: -1 });
-    console.log(`Fetched ${transactions.length} transactions`);
     res.json(transactions);
   } catch (error) {
     console.error('獲取交易記錄失敗:', error);
-    res.status(500).json({ error: '無法獲取交易記錄' });
+    res.status(500).json({ error: '無法獲取交易記錄', details: error.message });
   }
 });
 
-// 啟動伺服器
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`後端服務運行在 http://localhost:${PORT}`);
