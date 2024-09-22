@@ -1,3 +1,10 @@
+require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-ethers");
+
+module.exports = {
+  solidity: "0.8.20", // 或者其他你使用的Solidity版本
+};
+
 const chai = require('chai');
 const { expect } = chai;
 
@@ -12,7 +19,7 @@ describe("FjcuToken", function () {
   });
 
   it("應該設置正確的名稱和符號", async function () {
-    expect(await fjcuToken.name()).to.equal("fjcu");
+    expect(await fjcuToken.name()).to.equal("Fjcu");
     expect(await fjcuToken.symbol()).to.equal("FJCU");
   });
 

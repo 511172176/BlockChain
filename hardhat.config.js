@@ -4,6 +4,9 @@ require('dotenv').config();
 
 module.exports = {
   solidity: "0.8.20",
+  paths: {
+    sources: "./contracts",  // 合約所在的路徑
+  },
   networks: {
     goerli: {
       url: `https://goerli.infura.io/key/${process.env.INFURA_PROJECT_ID}`,
