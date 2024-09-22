@@ -4,6 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import axios from 'axios';
 import FjcuToken from './FjcuToken.json'; // 確保此文件包含正確的 ABI
+import './App.css'; // 確保引入 CSS
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faWallet, faExchangeAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
+import { faEthereum } from '@fortawesome/free-brands-svg-icons'; // 正確導入 faEthereum
+import ClipLoader from "react-spinners/ClipLoader"; // 引入加載指示器
 
 function App() {
   const [account, setAccount] = useState(null);
@@ -14,6 +19,12 @@ function App() {
   const [ethRecipient, setEthRecipient] = useState('');
   const [ethAmount, setEthAmount] = useState('');
   const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false); // 添加加載狀態
+
+  // 分頁相關狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const entriesPerPage = 10;
+  const totalPages = Math.ceil(transactions.length / entriesPerPage);
 
   // 環境變量
   const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
@@ -31,10 +42,13 @@ function App() {
         const [selectedAccount] = await window.ethereum.request({ method: 'eth_requestAccounts' });
         console.log("連接的帳戶地址:", selectedAccount); // 日誌
         setAccount(selectedAccount);
-        fetchBalances(selectedAccount);
-        fetchTransactions();
+        setLoading(true);
+        await fetchBalances(selectedAccount);
+        await fetchTransactions();
+        setLoading(false);
       } catch (error) {
         console.error("用戶拒絕了錢包連接", error);
+        setLoading(false);
       }
     } else {
       alert("請安裝 MetaMask 錢包！");
@@ -44,8 +58,8 @@ function App() {
   // 獲取代幣和 ETH 餘額
   const fetchBalances = async (address) => {
     console.log("正在獲取餘額，地址:", address); // 日誌
-    fetchTokenBalance(address);
-    fetchEthBalance(address);
+    await fetchTokenBalance(address);
+    await fetchEthBalance(address);
   };
 
   // 獲取 ERC-20 代幣餘額
@@ -92,6 +106,7 @@ function App() {
     }
 
     try {
+      setLoading(true);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = getContract(signer);
@@ -104,14 +119,16 @@ function App() {
       await tx.wait();
 
       alert(`代幣轉帳成功，交易哈希: ${tx.hash}`);
-      fetchBalances(account);
-      fetchTransactions();
+      await fetchBalances(account);
+      await fetchTransactions();
 
       // 通知後端保存代幣交易記錄
       await axios.post(`${backendUrl}/api/token-transfer`, { to: recipient, amount, txHash: tx.hash });
+      setLoading(false);
     } catch (error) {
       console.error("代幣轉帳失敗", error);
       alert("代幣轉帳失敗");
+      setLoading(false);
     }
   };
 
@@ -124,6 +141,7 @@ function App() {
     }
 
     try {
+      setLoading(true);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner(); // 使用用戶的 Signer
       console.log("發起 ETH 轉帳:", { ethRecipient, ethAmount });
@@ -136,112 +154,191 @@ function App() {
       await tx.wait();
 
       alert(`ETH 轉帳成功，交易哈希: ${tx.hash}`);
-      fetchEthBalance(account);
-      fetchTransactions();
+      await fetchEthBalance(account);
+      await fetchTransactions();
 
       // 通知後端保存 ETH 轉帳記錄
       await axios.post(`${backendUrl}/api/eth-transfer`, { to: ethRecipient, amount: ethAmount, txHash: tx.hash });
+      setLoading(false);
     } catch (error) {
       console.error("ETH 轉帳失敗", error);
       alert("ETH 轉帳失敗");
+      setLoading(false);
     }
   };
 
+  // 獲取當前頁面的交易記錄
+  const indexOfLastEntry = currentPage * entriesPerPage;
+  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+  const currentTransactions = transactions.slice(indexOfFirstEntry, indexOfLastEntry);
+
+  // 處理頁碼變更
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+  };
+
+  // 處理下拉選單變更
+  const handleSelectChange = (e) => {
+    setCurrentPage(Number(e.target.value));
+  };
+
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Fjcu Token DApp</h1>
-      {!account ? (
-        <button onClick={connectWallet}>連接錢包</button>
-      ) : (
-        <div>
-          <p>帳戶地址: {account}</p>
-          <p>代幣餘額: {tokenBalance} FJCU</p>
-          <p>ETH 餘額: {ethBalance} ETH</p>
+    <div className="App">
+      <header className="App-header">
+        <h1>Fjcu Token DApp <FontAwesomeIcon icon={faWallet} /></h1>
+      </header>
+      <div className="container">
+        {!account ? (
+          <button onClick={connectWallet}>
+            <FontAwesomeIcon icon={faWallet} /> 連接錢包
+          </button>
+        ) : (
+          <div>
+            <div className="section">
+              <p><strong>帳戶地址:</strong> {account}</p>
+              <p><strong>代幣餘額:</strong> {tokenBalance} FJCU</p>
+              <p><strong>ETH 餘額:</strong> {ethBalance} ETH</p>
+            </div>
 
-          <h2>轉帳 FJCU 代幣</h2>
-          <form onSubmit={handleTokenTransfer}>
-            <div>
-              <label>收款地址:</label>
-              <input
-                type="text"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                required
-                style={{ width: '400px' }}
-              />
+            <div className="section">
+              <h2>轉帳 FJCU 代幣 <FontAwesomeIcon icon={faExchangeAlt} /></h2>
+              <form onSubmit={handleTokenTransfer}>
+                <div>
+                  <label>收款地址:</label>
+                  <input
+                    type="text"
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label>金額:</label>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    min="0"
+                    step="1"
+                  />
+                </div>
+                <button type="submit">
+                  <FontAwesomeIcon icon={faCoins} /> 轉帳
+                </button>
+              </form>
             </div>
-            <div>
-              <label>金額:</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                min="0"
-              />
-            </div>
-            <button type="submit">轉帳</button>
-          </form>
 
-          <h2>轉帳 ETH</h2>
-          <form onSubmit={handleEthTransfer}>
-            <div>
-              <label>收款地址:</label>
-              <input
-                type="text"
-                value={ethRecipient}
-                onChange={(e) => setEthRecipient(e.target.value)}
-                required
-                style={{ width: '400px' }}
-              />
+            <div className="section">
+              <h2>轉帳 ETH <FontAwesomeIcon icon={faEthereum} /></h2>
+              <form onSubmit={handleEthTransfer}>
+                <div>
+                  <label>收款地址:</label>
+                  <input
+                    type="text"
+                    value={ethRecipient}
+                    onChange={(e) => setEthRecipient(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label>金額 (ETH):</label>
+                  <input
+                    type="number"
+                    value={ethAmount}
+                    onChange={(e) => setEthAmount(e.target.value)}
+                    required
+                    min="0"
+                    step="0.0001"
+                  />
+                </div>
+                <button type="submit">
+                  <FontAwesomeIcon icon={faEthereum} /> 轉帳 ETH
+                </button>
+              </form>
             </div>
-            <div>
-              <label>金額 (ETH):</label>
-              <input
-                type="number"
-                value={ethAmount}
-                onChange={(e) => setEthAmount(e.target.value)}
-                required
-                min="0"
-                step="0.0001"
-              />
-            </div>
-            <button type="submit">轉帳 ETH</button>
-          </form>
 
-          <h2>交易記錄</h2>
-          <table border="1" cellPadding="10">
-            <thead>
-              <tr>
-                <th>From</th>
-                <th>To</th>
-                <th>Amount</th>
-                <th>Tx Hash</th>
-                <th>Timestamp</th>
-                <th>類型</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map(tx => (
-                <tr key={tx._id}>
-                  <td>{tx.from}</td>
-                  <td>{tx.to}</td>
-                  <td>{tx.amount}</td>
-                  <td>
-                    <a href={`https://sepolia.arbiscan.io/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer">
-                      {tx.txHash ? `${tx.txHash.substring(0, 10)}...` : 'N/A'}
-                    </a>
-                  </td>
-                  <td>{tx.timestamp ? new Date(tx.timestamp).toLocaleString() : 'N/A'}</td>
-                  <td>{tx.type}</td> {/* 現在應該顯示代幣符號，例如 FJCU */}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            <div className="section">
+              <h2>交易記錄 <FontAwesomeIcon icon={faExchangeAlt} /></h2>
+              {loading ? (
+                <div className="loading-container">
+                  <ClipLoader color={"#61dafb"} loading={loading} size={50} />
+                </div>
+              ) : (
+                <>
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>From</th>
+                          <th>To</th>
+                          <th>Amount</th>
+                          <th>Tx Hash</th>
+                          <th>Timestamp</th>
+                          <th>類型</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentTransactions.length > 0 ? (
+                          currentTransactions.map((tx, index) => (
+                            <tr key={tx.txHash || index}>
+                              <td>{tx.from}</td>
+                              <td>{tx.to}</td>
+                              <td>{tx.amount}</td>
+                              <td>
+                                <a href={`https://sepolia.arbiscan.io/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer">
+                                  {tx.txHash ? `${tx.txHash.substring(0, 10)}...` : 'N/A'}
+                                </a>
+                              </td>
+                              <td>{tx.timestamp ? new Date(tx.timestamp).toLocaleString() : 'N/A'}</td>
+                              <td>{tx.type}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="6">暫無交易記錄</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 分頁控制 */}
+                  <div className="pagination">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      上一頁
+                    </button>
+
+                    <span>第 {currentPage} 頁 / {totalPages} 頁</span>
+
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      下一頁
+                    </button>
+
+                    {/* 下拉選單選擇頁碼 */}
+                    <select value={currentPage} onChange={handleSelectChange}>
+                      {Array.from({ length: totalPages }, (_, index) => (
+                        <option key={index + 1} value={index + 1}>
+                          第 {index + 1} 頁
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-export default App;
+    export default App;
