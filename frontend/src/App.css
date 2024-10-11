@@ -1,5 +1,60 @@
 /* frontend/src/App.css */
 
+.smart-contract-editor {
+  margin: 20px 0;
+}
+
+.smart-contract-editor textarea {
+  width: 100%;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.contract-analyzer {
+  margin-top: 20px;
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+.contract-analyzer h3 {
+  margin-top: 0;
+}
+
+.safe {
+  color: green;
+}
+
+.unsafe {
+  color: red;
+}
+
+.vulnerabilities, .errors {
+  margin-top: 10px;
+}
+
+.vulnerabilities ul, .errors ul {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.contract-analyzer pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+
+
+/*-------*/
+
+.contract-analyzer pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 .App {
   text-align: center;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

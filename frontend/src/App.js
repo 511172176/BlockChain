@@ -9,8 +9,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWallet, faExchangeAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { faEthereum } from '@fortawesome/free-brands-svg-icons'; // 正確導入 faEthereum
 import ClipLoader from "react-spinners/ClipLoader"; // 引入加載指示器
+import SmartContractEditor from './SmartContractEditor'; // 智能合約編輯器
+import ContractAnalyzer from './ContractAnalyzer'; // 智能合約分析器
 
 function App() {
+  // 既有的狀態
   const [account, setAccount] = useState(null);
   const [tokenBalance, setTokenBalance] = useState(0);
   const [ethBalance, setEthBalance] = useState(0);
@@ -20,6 +23,8 @@ function App() {
   const [ethAmount, setEthAmount] = useState('');
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false); // 添加加載狀態
+  const [contractCode, setContractCode] = useState(''); // 智能合約代碼
+  const [analysisResult, setAnalysisResult] = useState(null); // 分析結果
 
   // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState(1);
@@ -183,10 +188,40 @@ function App() {
     setCurrentPage(Number(e.target.value));
   };
 
+  // 處理智能合約代碼變更
+  const handleContractCodeChange = (code) => {
+    setContractCode(code);
+  };
+
+  // 處理智能合約檢測
+  const handleAnalyzeContract = async () => {
+    if (!contractCode) {
+      alert("請輸入智能合約代碼");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.post(`${backendUrl}/api/analyze-contract`, { code: contractCode });
+      console.log("智能合約檢測結果:", response.data);
+      setAnalysisResult(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error("智能合約檢測失敗", error);
+      // 顯示具體的錯誤信息
+      const errorMessage = error.response && error.response.data && error.response.data.error 
+        ? error.response.data.error 
+        : "智能合約檢測失敗";
+      alert(errorMessage);
+      setLoading(false);
+    }
+  };
+
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Fjcu Token DApp <FontAwesomeIcon icon={faWallet} /></h1>
+        <h1>FJCU Token DApp <FontAwesomeIcon icon={faWallet} /></h1>
       </header>
       <div className="container">
         {!account ? (
@@ -334,11 +369,24 @@ function App() {
                 </>
               )}
             </div>
+
+            {/* 智能合約檢測部分 */}
+            <div className="section">
+              <h2>智能合約檢測 <FontAwesomeIcon icon={faExchangeAlt} /></h2>
+              <SmartContractEditor code={contractCode} onCodeChange={handleContractCodeChange} />
+              <button onClick={handleAnalyzeContract} disabled={loading}>
+                {loading ? '檢測中...' : '檢測智能合約'}
+              </button>
+              {analysisResult && (
+                <ContractAnalyzer result={analysisResult} />
+              )}
+            </div>
+
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
 
-    export default App;
+export default App;
