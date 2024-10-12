@@ -1,14 +1,13 @@
-require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { ethers } = require('ethers');
-const FjcuToken = require('./FjcuToken.json'); // 確保此文件包含正確的 ABI
-const { spawn, spawnSync } = require('child_process'); // 使用 spawn 和 spawnSync
-const fs = require('fs');
+const { spawn, spawnSync } = require('child_process');
+const fs = require('fs-extra');
 const path = require('path');
-const crypto = require('crypto'); // 用於生成唯一文件名
-const os = require('os'); // 用於獲取用戶主目錄
+const crypto = require('crypto');
+
+require('dotenv').config({ path: '../.env' });
 
 const app = express();
 
@@ -19,7 +18,7 @@ console.log('CONTRACT_ADDRESS:', process.env.CONTRACT_ADDRESS);
 
 // CORS 設置
 const corsOptions = {
-  origin: 'http://localhost:3000', // 前端地址
+  origin: 'http://localhost:3000',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
   credentials: true,
@@ -50,10 +49,12 @@ const Transaction = mongoose.model('Transaction', new mongoose.Schema({
 const infuraUrl = `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`;
 const provider = new ethers.providers.JsonRpcProvider(infuraUrl);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+// 這裡需要替換為正確的 ABI 路徑
+const FjcuToken = require('./FjcuToken.json');
 const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, FjcuToken.abi, wallet);
 
 // 獲取代幣名稱和符號
-let tokenName = 'ERC20'; // 默認值
+let tokenName = 'ERC20';
 let tokenSymbol = 'ERC20';
 
 const initializeContract = async () => {
@@ -148,182 +149,125 @@ app.get('/api/transactions', async (req, res) => {
 app.post('/api/analyze-contract', async (req, res) => {
   const { code } = req.body;
 
-  // 增加日誌輸出以確認接收到的代碼
   console.log('接收到的合約代碼:', code);
 
   if (!code) {
     return res.status(400).json({ error: '缺少智能合約代碼' });
   }
 
-  // 定義臨時目錄的絕對路徑，使用單斜杠或雙反斜杠
   const tempDir = 'C:/temp_contracts';
-  // 或者使用雙反斜杠
-  // const tempDir = 'C:\\temp_contracts';
+  let contractPath;
 
   try {
-    // 確保臨時目錄存在
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
       console.log(`創建臨時目錄: ${tempDir}`);
     }
 
-    // 生成唯一的臨時文件名
     const uniqueId = crypto.randomBytes(16).toString('hex');
     const contractFilename = `Contract_${uniqueId}.sol`;
-    const contractPath = path.resolve(tempDir, contractFilename);
+    contractPath = path.resolve(tempDir, contractFilename);
     console.log(`合約文件路徑: ${contractPath}`);
 
-    // 寫入合約代碼，使用 UTF-8 編碼
     fs.writeFileSync(contractPath, code, 'utf8');
     console.log(`合約代碼已寫入臨時文件: ${contractPath}`);
 
-    // 確認寫入的代碼內容
     const writtenCode = fs.readFileSync(contractPath, 'utf8');
     console.log('寫入的合約代碼內容:', writtenCode);
 
-    // 定義 Slither 和 Solc 的絕對路徑
-    // 確保這裡的路徑是正確的，並替換為實際路徑
-    const slitherPath = 'C:/Users/ae887/AppData/Local/Programs/Python/Python312/Scripts/slither.exe'; // 替換為實際路徑
-    const solcPath = 'C:/Solidity/solc.exe'; // 替換為實際路徑
+    const slitherPath = 'C:/Users/ae887/AppData/Local/Programs/Python/Python312/Scripts/slither.exe';
+    const solcPath = 'C:/Solidity/solc.exe';
 
-    // 檢查 Slither 和 Solc 的版本
     const slitherVersion = spawnSync(slitherPath, ['--version']);
     const solcVersion = spawnSync(solcPath, ['--version']);
 
     if (slitherVersion.error) {
       console.error('Slither 無法運行:', slitherVersion.error);
+      fs.unlinkSync(contractPath);
       return res.status(500).json({ error: 'Slither 無法運行', details: slitherVersion.error.message });
     }
 
     if (solcVersion.error) {
       console.error('Solc 無法運行:', solcVersion.error);
+      fs.unlinkSync(contractPath);
       return res.status(500).json({ error: 'Solc 無法運行', details: solcVersion.error.message });
     }
 
     console.log('Slither version:', slitherVersion.stdout.toString().trim());
     console.log('Solc version:', solcVersion.stdout.toString().trim());
 
-    // 使用 Slither 分析合約，移除 '--allow-paths' 參數
-    const slither = spawn(slitherPath, [contractPath, '--solc', solcPath], { cwd: tempDir });
+    const slitherReportPath = path.join(tempDir, `slither_report_${uniqueId}.json`);
+    const slither = spawn(slitherPath, [contractPath, '--json', slitherReportPath, '--solc', solcPath], { cwd: tempDir });
 
-    let stdout = '';
-    let stderr = '';
-
-    slither.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    slither.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    slither.on('close', (code) => {
-      console.log('Slither exit code:', code);
-      console.log('Slither stdout:', stdout);
-      console.log('Slither stderr:', stderr);
-
-      // 在 Windows 上，-1 會被轉換為 4294967295，將其映射為 1
-      if (code === 4294967295) {
-        code = 1;
-      }
-
-      if (code === 1) {
-        // Slither 發現漏洞，這不是一個真正的錯誤
-        console.log('Slither 發現漏洞，進行後續解析。');
-
-        const vulnerabilities = [];
-        const errors = [];
-
-        // 定義正則表達式來提取漏洞信息
-        const versionIssueRegex = /Version constraint ([^\s]+) contains known severe issues/;
-        const immutableRegex = /(\w+)\.owner.*should be immutable/;
-
-        // 將 stdout 分割為行
-        const lines = stdout.split('\n');
-
-        lines.forEach(line => {
-          // 匹配版本問題
-          const versionIssueMatch = line.match(versionIssueRegex);
-          if (versionIssueMatch) {
-            const [_, versionConstraint] = versionIssueMatch;
-            vulnerabilities.push(`Version Constraint Issue: ${versionConstraint}`);
-          }
-
-          // 匹配 immutable 警告
-          const immutableMatch = line.match(immutableRegex);
-          if (immutableMatch) {
-            const [_, contractName] = immutableMatch;
-            vulnerabilities.push(`Immutable Variable Issue: ${contractName}.owner should be immutable`);
-          }
-        });
-
-        // 檢查是否有 Slither 的錯誤輸出
-        if (stderr && stderr.trim() !== '') {
-          console.warn(`Slither 警告/錯誤輸出: ${stderr}`);
-          // 可以選擇將這些錯誤添加到 `errors` 陣列
-          errors.push(stderr.trim());
+    slither.on('close', async (code) => {
+      try {
+        if (!fs.existsSync(slitherReportPath)) {
+          fs.unlinkSync(contractPath);
+          return res.status(500).json({ error: '合約內容有誤' });
         }
 
-        // 判斷分析是否安全
-        const analysis = {
-          safe: vulnerabilities.length === 0 && errors.length === 0,
-          vulnerabilities: vulnerabilities,
-          errors: errors,
-        };
+        const report = await fs.readJson(slitherReportPath);
+        console.log('Slither JSON 報告:', JSON.stringify(report, null, 2));
 
-        // 清理臨時文件
-        fs.unlinkSync(contractPath);
-        console.log(`臨時文件已清理: ${contractPath}`);
+        if (!report.results) {
+          console.warn('Slither 報告中未找到 results 字段。');
+        }
 
-        // 返回分析結果
-        res.json(analysis);
+        let vulnerabilities = [];
+        if (report.results && Array.isArray(report.results.vulnerabilities)) {
+          vulnerabilities = report.results.vulnerabilities.map(vuln => vuln.check);
+        } else if (report.results && Array.isArray(report.results.detectors)) {
+          vulnerabilities = report.results.detectors.map(detector => detector.check);
+        } else {
+          console.warn('Slither 報告中未找到 vulnerabilities 或 detectors 字段。');
+        }
 
-      } else if (code >= 2) {
-        // 真正的錯誤
-        console.error(`執行 Slither 時出錯: ${stderr}`);
-        // 清理臨時文件
-        fs.unlinkSync(contractPath);
-        console.log(`臨時文件已清理: ${contractPath}`);
-        return res.status(500).json({ error: '智能合約檢測失敗', details: stderr });
-      } else if (code === 0) {
-        // Slither 未發現任何漏洞
-        console.log('Slither 未發現任何漏洞。');
+        vulnerabilities = vulnerabilities.filter(vuln => typeof vuln === 'string');
+        const uniqueVulnerabilities = [...new Set(vulnerabilities)];
+        const safe = uniqueVulnerabilities.length === 0;
 
         const analysis = {
-          safe: true,
-          vulnerabilities: [],
+          safe: safe,
+          vulnerabilities: uniqueVulnerabilities,
           errors: [],
         };
 
-        // 清理臨時文件
-        fs.unlinkSync(contractPath);
-        console.log(`臨時文件已清理: ${contractPath}`);
+        if (code >= 2) {
+          if (report.error) {
+            analysis.errors.push(report.error);
+          } else {
+            analysis.errors.push('Slither 運行時出現未知錯誤。');
+          }
+        }
 
-        // 返回分析結果
-        res.json(analysis);
-      } else {
-        // 未預期的退出碼
-        console.error(`Slither 出現未預期的退出碼: ${code}`);
-        // 清理臨時文件
         fs.unlinkSync(contractPath);
+        fs.unlinkSync(slitherReportPath);
         console.log(`臨時文件已清理: ${contractPath}`);
-        return res.status(500).json({ error: '智能合約檢測失敗', details: '未預期的 Slither 退出碼' });
+        console.log(`報告文件已清理: ${slitherReportPath}`);
+
+        res.json(analysis);
+      } catch (err) {
+        console.error('處理 Slither 分析結果時出錯:', err);
+        if (fs.existsSync(contractPath)) fs.unlinkSync(contractPath);
+        if (fs.existsSync(slitherReportPath)) fs.unlinkSync(slitherReportPath);
+        return res.status(500).json({ error: '智能合約檢測過程中出錯', details: err.message });
       }
     });
 
     slither.on('error', (err) => {
       console.error('無法啟動 Slither 進程:', err);
-      // 清理臨時文件
-      fs.unlinkSync(contractPath);
+      if (fs.existsSync(contractPath)) fs.unlinkSync(contractPath);
       console.log(`臨時文件已清理: ${contractPath}`);
       return res.status(500).json({ error: '無法啟動 Slither 進程', details: err.message });
     });
 
   } catch (error) {
     console.error('智能合約檢測出錯:', error);
-    res.status(500).json({ error: '智能合約檢測失敗', details: error.message });
+    if (contractPath && fs.existsSync(contractPath)) fs.unlinkSync(contractPath);
+    return res.status(500).json({ error: '智能合約檢測失敗', details: error.message });
   }
 });
+
 
 // 啟動伺服器
 const PORT = process.env.PORT || 5000;

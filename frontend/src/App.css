@@ -1,5 +1,68 @@
 /* frontend/src/App.css */
 
+.contract-analyzer {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.contract-analyzer h3 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.contract-analyzer p {
+  font-size: 1.2em;
+  margin: 10px 0;
+}
+
+.contract-analyzer .safe {
+  color: #28a745; /* 綠色表示安全 */
+}
+
+.contract-analyzer .unsafe {
+  color: #dc3545; /* 紅色表示不安全 */
+}
+
+.contract-analyzer .vulnerabilities,
+.contract-analyzer .errors {
+  margin-top: 15px;
+}
+
+.contract-analyzer h4 {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.contract-analyzer ul {
+  list-style-type: disc;
+  list-style-position: inside; /* 將圓點置於文本內 */
+  padding-left: 0; /* 移除默認左側內邊距 */
+  margin-left: 0; /* 移除默認左側外邊距 */
+}
+
+.contract-analyzer ul li {
+  text-indent: -40px; /* 使用負的 text-indent */
+  margin-bottom: 8px; /* 調整列表項目的下邊距 */
+  line-height: 1.5;
+  color: #555; /* 字體顏色 */
+}
+
+.contract-analyzer .errors h4 {
+  color: #ffc107; /* 警告顏色，如橙色 */
+}
+
+.contract-analyzer .errors ul li {
+  color: #dc3545; /* 錯誤信息使用紅色 */
+}
+
+
+/*---------*/
+
 .smart-contract-editor {
   margin: 20px 0;
 }

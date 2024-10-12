@@ -194,6 +194,7 @@ function App() {
   };
 
   // 處理智能合約檢測
+  // 處理智能合約檢測
   const handleAnalyzeContract = async () => {
     if (!contractCode) {
       alert("請輸入智能合約代碼");
@@ -202,13 +203,13 @@ function App() {
 
     try {
       setLoading(true);
+      setAnalysisResult(null); // 重置之前的分析結果
       const response = await axios.post(`${backendUrl}/api/analyze-contract`, { code: contractCode });
       console.log("智能合約檢測結果:", response.data);
       setAnalysisResult(response.data);
       setLoading(false);
     } catch (error) {
       console.error("智能合約檢測失敗", error);
-      // 顯示具體的錯誤信息
       const errorMessage = error.response && error.response.data && error.response.data.error 
         ? error.response.data.error 
         : "智能合約檢測失敗";
@@ -216,6 +217,7 @@ function App() {
       setLoading(false);
     }
   };
+
 
 
   return (

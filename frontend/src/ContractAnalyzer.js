@@ -1,40 +1,43 @@
 // frontend/src/ContractAnalyzer.js
 
 import React from 'react';
+import PropTypes from 'prop-types';
+import './App.css'; // 引入新的 CSS 文件
 
 const ContractAnalyzer = ({ result }) => {
+  const { safe, vulnerabilities, errors } = result;
+
   return (
     <div className="contract-analyzer">
       <h3>檢測結果:</h3>
-      {result.safe ? (
+      {safe ? (
         <p className="safe">合約狀態: <strong>安全</strong></p>
       ) : (
         <p className="unsafe">合約狀態: <strong>不安全</strong></p>
       )}
 
-      {result.vulnerabilities.length > 0 && (
+      {Array.isArray(vulnerabilities) && vulnerabilities.length > 0 && (
         <div className="vulnerabilities">
           <h4>檢測到的漏洞:</h4>
           <ul>
-            {result.vulnerabilities.map((vuln, index) => (
+            {vulnerabilities.map((vuln, index) => (
               <li key={index}>{vuln}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {result.errors.length > 0 && (
-        <div className="errors">
-          <h4>編譯錯誤 / 警告:</h4>
-          <ul>
-            {result.errors.map((error, index) => (
-              <li key={index}>{error}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      
     </div>
   );
+};
+
+ContractAnalyzer.propTypes = {
+  result: PropTypes.shape({
+    safe: PropTypes.bool.isRequired,
+    vulnerabilities: PropTypes.arrayOf(PropTypes.string),
+    errors: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
 };
 
 export default ContractAnalyzer;
