@@ -103,7 +103,7 @@ REACT_APP_BACKEND_URL=http://localhost:5000
 
 ### 1. Clone 專案
 ```
-git clone https://github.com/yourname/fjcu-token-dapp.git
+git clone https://github.com/yourname/BlockChain.git
 cd fjcu-token-dapp
 ```
 ### 2. 安裝後端
@@ -180,9 +180,9 @@ flowchart TD
     end
 
     subgraph Backend[後端 Express]
-        B1[/GET /api/balance/]          %% 後端查 token 餘額
-        B2[/POST /api/token-transfer/]  %% 只記錄交易
-        B3[/POST /api/eth-transfer/]    %% 只記錄交易
+        B1[/GET /api/balance/]          
+        B2[/POST /api/token-transfer/]  
+        B3[/POST /api/eth-transfer/]    
         B4[/GET /api/transactions/]
         B5[/POST /api/analyze-contract/]
     end
