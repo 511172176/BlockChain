@@ -27,7 +27,7 @@
 ---
 
 ## 專案架構
-
+```text
 .
 ├─ frontend/                          # React 前端
 │  ├─ package.json
@@ -45,7 +45,7 @@
 │  └─ FjcuToken.json                  # ERC-20 ABI（後端用）
 │
 └─ .env                               # 共享環境變數
-
+```
 ---
 
 ## 主要依賴套件
@@ -129,11 +129,12 @@ npm start
 ## API 範例
 
 ### 查詢 ERC20 餘額
-GET /api/balance/0x1234...abcd
+```h.abcd
 Response:
 { "balance": "1000.0" }
-
+```
 ### 提交代幣轉帳紀錄
+```
 POST /api/token-transfer
 Content-Type: application/json
 {
@@ -142,8 +143,9 @@ Content-Type: application/json
   "amount": "100",
   "txHash": "0xabc123..."
 }
-
+```
 ### 智能合約檢測
+```
 POST /api/analyze-contract
 Content-Type: application/json
 {
@@ -155,7 +157,7 @@ Response:
   "vulnerabilities": ["reentrancy", "tx.origin"],
   "errors": []
 }
-
+```
 ## 系統流程圖
 
 ```mermaid
