@@ -84,44 +84,50 @@
 ## 環境變數設定
 
 建立 `.env` 檔案：
-
+```
 MONGODB_URI=mongodb://localhost:27017/fjcu_dapp
 INFURA_PROJECT_ID=your_infura_project_id
 PRIVATE_KEY=0x你的私鑰
 CONTRACT_ADDRESS=0xYourContractAddress
 PORT=5000
 CORS_ORIGINS=http://localhost:3000
-
+```
 前端若是 Create React App，需要額外在 `.env` 加上：
+```
 REACT_APP_CONTRACT_ADDRESS=0xYourContractAddress
 REACT_APP_BACKEND_URL=http://localhost:5000
-
+```
 ---
 
 ## 安裝與啟動
 
 ### 1. Clone 專案
+```
 git clone https://github.com/yourname/fjcu-token-dapp.git
 cd fjcu-token-dapp
-
+```
 ### 2. 安裝後端
+```
 cd backend
 npm install
-
+```
 ### 3. 安裝前端
+```
 cd ../frontend
 npm install
-
+```
 ### 4. 啟動後端
+```
 cd ../backend
 npm run dev   # 或 npm start
-
+```
 後端預設運行在 http://localhost:5000
 
 ### 5. 啟動前端
+```
 cd ../frontend
 npm start
-
+```
 前端預設運行在 http://localhost:3000
 
 ---
@@ -174,9 +180,9 @@ flowchart TD
     end
 
     subgraph Backend[後端 Express]
-        B1[/GET /api/balance/]
-        B2[/POST /api/token-transfer/]
-        B3[/POST /api/eth-transfer/]
+        B1[/GET /api/balance/]          %% 後端查 token 餘額
+        B2[/POST /api/token-transfer/]  %% 只記錄交易
+        B3[/POST /api/eth-transfer/]    %% 只記錄交易
         B4[/GET /api/transactions/]
         B5[/POST /api/analyze-contract/]
     end
@@ -195,20 +201,27 @@ flowchart TD
         S2[Solc]
     end
 
-    %% 流程連線
+    %% 使用者與前端
     U1 --> F1
     U2 --> F1
+
+    %% 查餘額：前端 -> 後端 -> 鏈上
     F1 --> B1
+    B1 --> C1
+    B1 --> F1
+
+    %% 送交易：前端直接上鏈；同時告知後端記錄
+    F1 --> C1
+    F1 --> C2
     F1 --> B2
     F1 --> B3
-    F1 --> B4
-    F2 --> B5
-    B1 --> C1
-    B2 --> C1
-    B3 --> C2
-    B4 --> D1
     B2 --> D1
     B3 --> D1
+    B4 --> D1
+    B4 --> F1
+
+    %% 合約分析：前端 -> 後端 -> Slither/solc -> 前端
+    F2 --> B5
     B5 --> S1
     S1 --> S2
     B5 --> F3
