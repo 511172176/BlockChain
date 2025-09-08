@@ -168,59 +168,64 @@ Response:
 
 ```mermaid
 flowchart TD
-    subgraph User[使用者]
-        U1[MetaMask 錢包<br/>連接帳號]
+    %% 節點區（名稱盡量簡短，避免特殊符號）
+    subgraph User
+        U1[MetaMask 錢包]
         U2[DApp 操作<br/>查詢 / 轉帳 / 分析]
     end
 
-    subgraph Frontend[前端 React]
-        F1[App.js<br/>顯示餘額/交易紀錄]
+    subgraph Frontend
+        F1[App.js<br/>顯示餘額 / 交易紀錄]
         F2[SmartContractEditor.jsx<br/>輸入智能合約]
         F3[ContractAnalyzer.jsx<br/>顯示分析結果]
     end
 
-    subgraph Backend[後端 Express]
-        B1[/GET /api/balance/]          
-        B2[/POST /api/token-transfer/]  
-        B3[/POST /api/eth-transfer/]    
+    subgraph Backend
+        B1[/GET /api/balance/]
+        B2[/POST /api/token-transfer/]
+        B3[/POST /api/eth-transfer/]
         B4[/GET /api/transactions/]
         B5[/POST /api/analyze-contract/]
     end
 
-    subgraph Chain[區塊鏈 Arbitrum]
-        C1[ERC20 balanceOf/transfer]
-        C2[ETH 餘額/轉帳]
+    subgraph Chain
+        C1[ERC20 balanceOf / transfer]
+        C2[ETH 餘額 / 轉帳]
     end
 
-    subgraph DB[MongoDB]
-        D1[(交易紀錄)]
+    subgraph DB
+        D1[交易紀錄]
     end
 
-    subgraph Analyzer[Slither+solc]
+    subgraph Analyzer
         S1[Slither]
-        S2[Solc]
+        S2[solc]
     end
 
-    %% 使用者與前端
+    %% 使用者 ↔ 前端
     U1 --> F1
     U2 --> F1
 
-    %% 查餘額：前端 -> 後端 -> 鏈上
+    %% 查餘額：前端 → 後端 → 鏈上 → 回前端
     F1 --> B1
     B1 --> C1
+    C1 --> B1
     B1 --> F1
 
-    %% 送交易：前端直接上鏈；同時告知後端記錄
+    %% 送交易：前端直送鏈上；同時告知後端紀錄
     F1 --> C1
     F1 --> C2
     F1 --> B2
     F1 --> B3
     B2 --> D1
     B3 --> D1
+
+    %% 查交易紀錄：前端 → 後端 → DB → 回前端
+    F1 --> B4
     B4 --> D1
     B4 --> F1
 
-    %% 合約分析：前端 -> 後端 -> Slither/solc -> 前端
+    %% 合約分析：前端 → 後端 → Slither/solc → 回前端
     F2 --> B5
     B5 --> S1
     S1 --> S2
